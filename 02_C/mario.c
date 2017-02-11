@@ -1,11 +1,11 @@
 #include <cs50.h>
 #include <stdio.h>
 
-const int gap=2;
-
-void drow_line(int a, int b);
+const int GAP=2; //GAP size
 
 int normal_input(void);
+
+void drow_line(int a, int b);
 
 int main(void)
 {
@@ -16,29 +16,29 @@ int main(void)
         {
             drow_line(i,lines);
         }
-          //  printf("\n");
   } 
 }
 
 int normal_input(void)
 {
-  int result=-1;
-  while ((result<0) || (result>23))
+  int result=0;
+ do
   {
      printf("Height: ");        
      result = get_int();
-  } 
+  }
+  while (result<0 || result>23);
   return result;
 }
 
 void drow_line(int a, int b)
 {
-    for (int i=0; i<b+a+gap+1 ;i++)
+    for (int i=0, cur_lenght =b+a+GAP+1; i<cur_lenght ;i++)
     {
-        if ((i<b+1-a-2) || ((i>b-1) && (i<b+gap) ) )
-         printf(" ");
+        if ((i<b-a-1) || ((i>b-1) && (i<b+GAP) ) )
+            printf(" ");
         else
-        printf("#");
+            printf("#");
     }    
     printf("\n");
 }
