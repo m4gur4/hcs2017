@@ -60,6 +60,6 @@ int main(int argc, char *argv[])
 
 bool isJpeg(BYTE* buf)
 {
-    if ( (buf[0]==0xff) && (buf[1]==0xd8) && (buf[2]==0xff) && (buf[3]>>4==0xe) ) return 1;
+    if ( (buf[0] == 0xff) && (buf[1] == 0xd8) && (buf[2] == 0xff) && (buf[3]>>4 == 0xe) ) return 1;
     else return 0;
 }

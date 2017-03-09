@@ -7,6 +7,15 @@
 
 #include "bmp.h"
 
+const int COLOR_MAX = 0xFF;
+const int COLOR_MIN = 0x00;
+
+int paddingCalc(int width);
+void writeHeader(FILE* outFile,BITMAPFILEHEADER bf,BITMAPINFOHEADER bi);
+void paddingWrite(FILE* outfile,int padding);
+RGBTRIPLE fixPixel(RGBTRIPLE triple);
+void writeBody(FILE* inptr, FILE* outptr, BITMAPINFOHEADER bi);
+
 int main(int argc, char *argv[])
 {
     // ensure proper usage
@@ -54,15 +63,50 @@ int main(int argc, char *argv[])
         fprintf(stderr, "Unsupported file format.\n");
         return 4;
     }
+    writeHeader(outptr,bf,bi);
+    writeBody(inptr,outptr,bi);
+    fclose(inptr);
+    fclose(outptr);
+    return 0;
+}
 
+int paddingCalc(int width)
+{
+  return (4 - (width * sizeof(RGBTRIPLE)) % 4) % 4;  
+}
+
+void writeHeader(FILE* outFile,BITMAPFILEHEADER bf,BITMAPINFOHEADER bi)
+{
     // write outfile's BITMAPFILEHEADER
-    fwrite(&bf, sizeof(BITMAPFILEHEADER), 1, outptr);
+    fwrite(&bf, sizeof(BITMAPFILEHEADER), 1, outFile);
 
     // write outfile's BITMAPINFOHEADER
-    fwrite(&bi, sizeof(BITMAPINFOHEADER), 1, outptr);
+    fwrite(&bi, sizeof(BITMAPINFOHEADER), 1, outFile);
+}
 
+void paddingWrite(FILE* outfile,int padding)
+{
+    for (int k = 0; k < padding; k++)
+    {
+        fputc(0x00, outfile);
+    }
+}
+
+RGBTRIPLE fixPixel(RGBTRIPLE triple)
+{
+    if (triple.rgbtRed == COLOR_MAX) 
+    {
+        triple.rgbtRed = COLOR_MIN;
+        triple.rgbtBlue = COLOR_MIN;
+        triple.rgbtGreen = COLOR_MIN;
+    }
+    return triple;
+}
+
+void writeBody(FILE* inptr, FILE* outptr, BITMAPINFOHEADER bi)
+{
     // determine padding for scanlines
-    int padding =  (4 - (bi.biWidth * sizeof(RGBTRIPLE)) % 4) % 4;
+    int padding =  paddingCalc(bi.biWidth);
 
     // iterate over infile's scanlines
     for (int i = 0, biHeight = abs(bi.biHeight); i < biHeight; i++)
@@ -70,37 +114,14 @@ int main(int argc, char *argv[])
         // iterate over pixels in scanline
         for (int j = 0; j < bi.biWidth; j++)
         {
-            // temporary storage
             RGBTRIPLE triple;
-
-            // read RGB triple from infile
             fread(&triple, sizeof(RGBTRIPLE), 1, inptr);
-            if (triple.rgbtRed==0xff) 
-                {
-                    triple.rgbtRed=0x00;
-                    triple.rgbtBlue=0x00;
-                    triple.rgbtGreen=0x00;
-                }
-            // write RGB triple to outfile
+            triple = fixPixel(triple);
             fwrite(&triple, sizeof(RGBTRIPLE), 1, outptr);
         }
-
         // skip over padding, if any
         fseek(inptr, padding, SEEK_CUR);
-
         // then add it back (to demonstrate how)
-        for (int k = 0; k < padding; k++)
-        {
-            fputc(0x00, outptr);
-        }
+        paddingWrite(outptr,padding);
     }
-
-    // close infile
-    fclose(inptr);
-
-    // close outfile
-    fclose(outptr);
-
-    // success
-    return 0;
 }

@@ -8,6 +8,12 @@
 
 #include "bmp.h"
 
+int paddingCalc(int width);
+void writeHeader(FILE* outFile,BITMAPFILEHEADER bf,BITMAPINFOHEADER bi);
+void paddingWrite(FILE* outfile,int padding);
+void writeBody(FILE* inptr, FILE* outptr, BITMAPINFOHEADER bi,BITMAPINFOHEADER newBI,float Ratio);
+
+
 int main(int argc, char *argv[])
 {
     // ensure proper usage
@@ -68,52 +74,70 @@ int main(int argc, char *argv[])
     newBI = bi;
     newBI.biWidth = lroundf(newBI.biWidth*Ratio);
     newBI.biHeight = lroundf(newBI.biHeight*Ratio);
-    
-    int padding = (4 - (bi.biWidth * sizeof(RGBTRIPLE)) % 4) % 4;
-    int newPadding = (4 - (newBI.biWidth * sizeof(RGBTRIPLE)) % 4) % 4;
-
     // outfile's header info
-    newBI.biSizeImage = ((sizeof(RGBTRIPLE) * newBI.biWidth) + newPadding) * abs(newBI.biHeight);
+    newBI.biSizeImage = ((sizeof(RGBTRIPLE) * newBI.biWidth) + paddingCalc(newBI.biWidth)) * abs(newBI.biHeight);
     newBF.bfSize = newBI.biSizeImage + sizeof(BITMAPINFOHEADER) + sizeof(BITMAPFILEHEADER);
-    
-    int precision=Ratio*1000;
 
+    writeHeader(outptr,newBF,newBI);
+    writeBody(inptr,outptr,bi,newBI,Ratio);
+
+    fclose(inptr);
+    fclose(outptr);
+    // success
+    return 0;
+}
+
+
+int paddingCalc(int width)
+{
+  return (4 - (width * sizeof(RGBTRIPLE)) % 4) % 4;  
+}
+
+void writeHeader(FILE* outFile,BITMAPFILEHEADER bf,BITMAPINFOHEADER bi)
+{
     // write outfile's BITMAPFILEHEADER
-    fwrite(&newBF, sizeof(BITMAPFILEHEADER), 1, outptr);
+    fwrite(&bf, sizeof(BITMAPFILEHEADER), 1, outFile);
 
     // write outfile's BITMAPINFOHEADER
-    fwrite(&newBI, sizeof(BITMAPINFOHEADER), 1, outptr);
+    fwrite(&bi, sizeof(BITMAPINFOHEADER), 1, outFile);
+}
 
+void paddingWrite(FILE* outfile,int padding)
+{
+    for (int k = 0; k < padding; k++)
+    {
+        fputc(0x00, outfile);
+    }
+}
+
+void writeBody(FILE* inptr, FILE* outptr, BITMAPINFOHEADER bi,BITMAPINFOHEADER newBI,float Ratio)
+{
     RGBTRIPLE triple;
     
     RGBTRIPLE* buffer = malloc(newBI.biWidth*sizeof(RGBTRIPLE));
-
+    
+    int precision = Ratio*1000;
     for (int i = 0, biHeight = abs(bi.biHeight); i < biHeight; i++){
             
-        int currentpixel=0;  //in newline
+        int currentpixel = 0;  //in newline
         // read line to buffer
         for (int j = 0; j < bi.biWidth; j++){
             fread(&triple, sizeof(RGBTRIPLE), 1, inptr);
             // add pixel to buffer if need 
-            if (j*precision%(int)(precision/Ratio)==0){
-                for(int z=0; z<Ratio; z++){
+            if (j*precision%(int)(precision/Ratio) == 0){
+                for(int z = 0; z<Ratio; z++){
                     *(buffer + currentpixel) = triple;
                     currentpixel++;
                 } 
             }
         }
         // write line if need
-        if (i*precision%(int)(precision/Ratio)==0)
-           for (int l =0 ; l< Ratio; l++){
+        if (i*precision%(int)(precision/Ratio) == 0)
+           for (int l = 0 ; l< Ratio; l++){
                 fwrite(buffer, sizeof(RGBTRIPLE), newBI.biWidth, outptr);  
-                for (int p = 0; p < newPadding; p++)
-                    fputc(0x00, outptr);
+                paddingWrite(outptr,paddingCalc(newBI.biWidth));
             }
-        fseek(inptr, padding, SEEK_CUR);
+        fseek(inptr, paddingCalc(bi.biWidth), SEEK_CUR);
     }
     free(buffer);
-    fclose(inptr);
-    fclose(outptr);
-    // success
-    return 0;
 }
