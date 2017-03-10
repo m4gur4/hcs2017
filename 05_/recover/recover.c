@@ -8,6 +8,7 @@ const int BLOCK = 512;
 const int LETTERS = 7;
 
 bool isJpeg(BYTE* buf);
+void parseJpeg(FILE* rawFile);
 
 int main(int argc, char *argv[])
 {
@@ -23,15 +24,29 @@ int main(int argc, char *argv[])
         fprintf(stderr, "Could not open %s.\n", infile);
         return 2;
     }
+    
+    parseJpeg(rawFile);
+    
+    fclose(rawFile);
+    return 0;
+}
 
+bool isJpeg(BYTE* buf)
+{
+    if ( (buf[0] == 0xff) && (buf[1] == 0xd8) && (buf[2] == 0xff) && (buf[3]>>4 == 0xe) ) return 1;
+    else return 0;
+}
+
+void parseJpeg(FILE* rawFile)
+{
     FILE* jpegFile = NULL;
     int jpegCouter = 0;
     char* jpegName = malloc(LETTERS * sizeof(char));
     
     BYTE* buf;
     buf = malloc(BLOCK * sizeof(BYTE));
-    while ( !feof(rawFile) ) 
-        {
+    while ( !feof(rawFile) )
+    {
             fread(buf, BLOCK, 1, rawFile);      
             if (isJpeg(buf))
             {
@@ -40,26 +55,14 @@ int main(int argc, char *argv[])
                 sprintf(jpegName, "%03d.jpg", jpegCouter);
                 jpegFile = fopen(jpegName, "w");
                 jpegCouter++;
-               // printf("%s , ", jpegName);
-            }
-            
+             }
             if (feof(rawFile)) 
                 break;    
             if (jpegFile != NULL) 
                 fwrite(buf, BLOCK, 1, jpegFile);
-        }
+    }
     free(buf);
     free(jpegName);
-    
-    fclose(rawFile);
     if (jpegFile != NULL)
-        fclose(jpegFile);
-
-    return 0;
-}
-
-bool isJpeg(BYTE* buf)
-{
-    if ( (buf[0] == 0xff) && (buf[1] == 0xd8) && (buf[2] == 0xff) && (buf[3]>>4 == 0xe) ) return 1;
-    else return 0;
+        fclose(jpegFile);    
 }
