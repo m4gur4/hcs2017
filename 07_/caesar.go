@@ -2,36 +2,62 @@ package main
 
 import (
 	"bufio"
-	"bytes"
 	"fmt"
 	"os"
 	"strconv"
 	"strings"
 )
 
+const (
+	ALPABET_LENGTH = 26
+)
+
+var (
+	letterBigA   = byte('A')
+	letterBigZ   = byte('Z')
+	letterSmallA = byte('a')
+	letterSmallZ = byte('z')
+)
+
+func isAlpha(letter byte) bool {
+
+	if (letter < letterBigA) || (letter > letterSmallZ) {
+		return false
+	} else if (letter > letterBigZ) && (letter < letterSmallA) {
+		return false
+	}
+	return true
+}
+
 func getInput() string {
+
 	reader := bufio.NewReader(os.Stdin)
 	fmt.Print("plaintext: ")
 	text, _ := reader.ReadString('\n')
 	return text
 }
 
-func shiftChar(letter string, k int) string {
-	a := int(letter[0]) + k
-	if a > 'z' {
-		return string(a - 26)
-	} else if a < 'a' {
-		return string(a + 26)
+func shiftChar(letter byte, k byte) byte {
+
+	if isAlpha(letter) {
+		if letter >= letterSmallA {
+			return (((letter - letterSmallA) + k) % ALPABET_LENGTH) + letterSmallA
+		} else if letter >= letterBigA {
+			return (((letter - letterBigA) + k) % ALPABET_LENGTH) + letterBigA
+		}
 	}
-	return string(a)
+	return letter
 }
 
 func encodeString(text string, k int) string {
-	var buffer bytes.Buffer
-	for _, v := range text {
-		buffer.WriteString(shiftChar(string(v), k))
+
+	wordArray := []byte(text)
+	for i := 0; i < len(text); i++ {
+		if isAlpha(wordArray[i]) {
+			wordArray[i] = shiftChar(wordArray[i], byte(k))
+		}
 	}
-	return buffer.String()
+	return string(wordArray)
 }
 
 func main() {
